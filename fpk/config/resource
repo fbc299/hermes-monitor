@@ -1,0 +1,38 @@
+{
+    "docker-project":
+    {
+        "projects":
+        [
+            {
+                "name": "hermes-monitor",
+                "path": "docker"
+            }
+        ]
+    },
+    "data-share":
+    {
+        "shares":
+        [
+            {
+                "name": "hermes-monitor",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-hermes-monitor"
+                    ]
+                }
+            },
+            {
+                "name": "hermes-monitor/data",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-hermes-monitor"
+                    ]
+                }
+            }
+        ]
+    }
+}

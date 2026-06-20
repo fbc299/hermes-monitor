@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>{% block title %}Hermes 监控{% endblock %}</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--border:#2a2f3a;--text:#e6e8ee;--muted:#8b93a7;--accent:#4f9cf9;--green:#34d399;--red:#f87171;--amber:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;font-size:14px;line-height:1.5}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+header{display:flex;align-items:center;gap:20px;padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--border)}
+header .brand{font-weight:600;font-size:16px}header nav a{color:var(--muted);margin-right:18px}
+header nav a.active,header nav a:hover{color:var(--text);text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:24px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+.card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.card .value{font-size:24px;font-weight:600;margin-top:6px}
+.card .sub{color:var(--muted);font-size:12px;margin-top:4px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--panel2)}
+tr:last-child td{border-bottom:none}tr:hover td{background:var(--panel2)}
+td.mono,.mono{font-family:SFMono-Regular,Consolas,Liberation Mono,monospace;font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px}
+.pill.ok{background:rgba(52,211,153,.15);color:var(--green)}
+.pill.err{background:rgba(248,113,113,.15);color:var(--red)}
+.pill.src{background:rgba(79,156,249,.15);color:var(--accent)}
+.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.filters input,.filters select{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px}
+.filters button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px}
+pre{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:auto;max-height:420px;white-space:pre-wrap;word-break:break-word}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bar{width:70%;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.bar-day{color:var(--muted);font-size:10px;margin-top:4px;transform:rotate(-45deg);white-space:nowrap}
+.muted{color:var(--muted)}.empty{text-align:center;padding:40px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header>
+<div class="brand">Hermes 监控</div>
+<nav>
+<a href="/{% if token %}?token={{ token }}{% endif %}" class="{% block nav_overview %}{% endblock %}">概览</a>
+<a href="/stats{% if token %}?token={{ token }}{% endif %}" class="{% block nav_stats %}{% endblock %}">统计</a>
+<a href="/settings{% if token %}?token={{ token }}{% endif %}" class="{% block nav_settings %}{% endblock %}">⚙ 设置</a>
+</nav>
+</header>
+<div class="wrap">
+{% block content %}{% endblock %}
+</div>
+</body>
+</html>

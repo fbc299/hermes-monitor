@@ -1,0 +1,5 @@
+#!/bin/bash
+# upgrade_callback — called after the new container is running.
+
+echo "Hermes Monitor upgraded successfully."
+echo "Your data is preserved in /app/data/ inside the container."

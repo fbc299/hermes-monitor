@@ -1,0 +1,23 @@
+#!/bin/bash
+# install_callback — called after the Docker container is running.
+
+NAS_IP=$(ip route get 1 2>/dev/null | awk '{print $7;exit}' || echo "NAS_IP")
+echo ""
+echo "========================================="
+echo "  Hermes Monitor installed!"
+echo "========================================="
+echo ""
+echo "  Dashboard:  http://${NAS_IP}:8480"
+echo "  Settings:   http://${NAS_IP}:8480/settings"
+echo ""
+echo "  IMPORTANT: Open the Settings page FIRST"
+echo "  to configure your LLM provider. No config"
+echo "  file editing needed — everything is done"
+echo "  through the web UI."
+echo ""
+echo "  Settings to configure:"
+echo "    - Upstream Base URL (LLM provider address)"
+echo "    - Upstream API Key (your provider's key)"
+echo "    - Access Token (optional, for dashboard security)"
+echo ""
+echo "========================================="

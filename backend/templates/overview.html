@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}概览 · Hermes 监控{% endblock %}
+{% block nav_overview %}active{% endblock %}
+
+{% block content %}
+<div class="cards">
+  <div class="card"><div class="label">今日调用</div><div class="value">{{ overview.total_calls }}</div></div>
+  <div class="card"><div class="label">今日费用 (USD)</div><div class="value">${{ "%.4f"|format(overview.total_cost) }}</div></div>
+  <div class="card"><div class="label">今日 Token</div><div class="value">{{ "{:,}".format(overview.total_tokens) }}</div><div class="sub">输入 {{ "{:,}".format(overview.input_tokens) }} · 输出 {{ "{:,}".format(overview.output_tokens) }}</div></div>
+  <div class="card"><div class="label">平均延迟</div><div class="value">{{ overview.avg_latency_ms }} ms</div></div>
+  <div class="card"><div class="label">错误率</div><div class="value" style="color: {% if overview.error_rate > 0 %}var(--red){% else %}var(--green){% endif %}">{{ overview.error_rate }}%</div><div class="sub">{{ overview.error_count }} / {{ overview.total_calls }} 次错误</div></div>
+</div>
+
+<div style="text-align:right; margin-bottom:16px;"><a href="/settings{% if token %}?token={{ token }}{% endif %}" style="background:var(--panel);padding:8px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;">⚙ 设置</a></div>
+
+{% if not upstream or upstream == "(not configured)" %}
+<div class="card" style="border-color: var(--amber); background: rgba(251,191,36,.08); margin-bottom: 20px;">
+  <strong>⚠ 未配置上游 Provider</strong> — 请在<a href="/settings{% if token %}?token={{ token }}{% endif %}">设置页面</a>填写上游地址和 API Key
+</div>
+{% endif %}
+
+<form class="filters" method="get">
+  {% if token %}<input type="hidden" name="token" value="{{ token }}">{% endif %}
+  <input name="model" placeholder="模型" value="{{ filters.model }}">
+  <select name="status"><option value="">全部状态</option><option value="success" {% if filters.status == "success" %}selected{% endif %}>成功</option><option value="error" {% if filters.status == "error" %}selected{% endif %}>错误</option></select>
+  <input name="q" placeholder="搜索 prompt..." value="{{ filters.q }}" style="flex:1; min-width:200px;">
+  <button type="submit">筛选</button>
+</form>
+
+<table><thead><tr><th>时间</th><th>模型</th><th>来源</th><th>状态</th><th>Token (入/出)</th><th>费用</th><th>延迟</th><th>Prompt 预览</th></tr></thead>
+<tbody>
+{% for c in calls %}<tr>
+  <td class="mono time-cell" data-time="{{ c.created_at }}">{{ c.created_at[5:16].replace("T", " ") if c.created_at }}</td>
+  <td class="mono">{{ c.model or "—" }}</td>
+  <td><span class="pill src">{{ c.source }}</span></td>
+  <td>{% if c.status == "success" %}<span class="pill ok">成功</span>{% else %}<span class="pill err">错误</span>{% endif %}</td>
+  <td class="mono">{{ c.input_tokens }} / {{ c.output_tokens }}</td>
+  <td class="mono">${{ "%.4f"|format(c.cost) }}</td>
+  <td class="mono">{{ c.latency_ms or "—" }}{% if c.latency_ms %} ms{% endif %}</td>
+  <td><a href="/call/{{ c.id }}{% if token %}?token={{ token }}{% endif %}">{{ c.prompt_preview }}</a></td>
+{% else %}<tr><td colspan="8" class="empty">还没有调用记录 — 把 Hermes 的 base_url 指向本服务试试</td></tr>{% endfor %}
+</tbody></table>
+
+<script>
+// Convert UTC timestamps to local time
+document.querySelectorAll('.time-cell').forEach(el => {
+  const utc = el.getAttribute('data-time');
+  if (!utc) return;
+  const d = new Date(utc + 'Z');
+  const pad = n => String(n).padStart(2, '0');
+  const local = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  el.textContent = local;
+});
+</script>
+{% endblock %}

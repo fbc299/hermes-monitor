@@ -1,0 +1,15 @@
+# Hermes Monitor backend dependencies.
+# Kept deliberately small for low-power NAS hardware.
+# Using >= so builds don't break when exact versions disappear from PyPI.
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+SQLAlchemy>=2.0.30
+# httpx drives the reverse proxy to the upstream LLM provider.
+httpx>=0.27.0
+# Jinja2 renders the minimal server-side dashboard.
+jinja2>=3.1.0
+# tiktoken gives accurate token estimates when the provider omits usage.
+# It's optional at runtime (see app/tokens.py) but listed for Docker builds.
+tiktoken>=0.7.0
+# Test-time only (kept out of the Docker image).
+#   pytest, pytest-asyncio, respx

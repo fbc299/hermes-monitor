@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}调用详情 · Hermes 监控{% endblock %}
+{% block nav_overview %}active{% endblock %}
+
+{% block content %}
+<p><a href="/{% if token %}?token={{ token }}{% endif %}">← 返回概览</a></p>
+
+<div class="cards">
+  <div class="card"><div class="label">模型</div><div class="value" style="font-size:16px;">{{ gen.model or "—" }}</div></div>
+  <div class="card"><div class="label">状态</div><div class="value" style="font-size:16px; color: {% if gen.status == "success" %}var(--green){% else %}var(--red){% endif %};">{% if gen.status == "success" %}成功{% else %}错误{% endif %}</div></div>
+  <div class="card"><div class="label">Token</div><div class="value" style="font-size:16px;">{{ gen.total_tokens }}</div><div class="sub">输入 {{ gen.input_tokens }} · 输出 {{ gen.output_tokens }}</div></div>
+  <div class="card"><div class="label">费用</div><div class="value" style="font-size:16px;">${{ "%.6f"|format(gen.cost) }}</div></div>
+  <div class="card"><div class="label">延迟</div><div class="value" style="font-size:16px;">{{ gen.latency_ms or "—" }} ms</div>{% if gen.ttft_ms %}<div class="sub">首 token {{ gen.ttft_ms }} ms</div>{% endif %}</div>
+</div>
+
+<div class="grid2">
+  <div><h3>Prompt (输入)</h3><pre>{{ prompt_pretty }}</pre></div>
+  <div><h3>Completion (输出)</h3><pre>{{ completion_pretty }}</pre></div>
+</div>
+
+{% if gen.error_msg %}
+<h3 style="color: var(--red);">错误信息</h3>
+<pre style="border-color: var(--red);">{{ gen.error_msg }}</pre>
+{% endif %}
+
+<p class="muted mono" style="margin-top:24px;">ID {{ gen.id }} · 来源 {{ gen.source }} · Provider {{ gen.provider or "—" }} · 时间 <span class="time-cell" data-time="{{ gen.created_at }}">{{ gen.created_at }}</span></p>
+
+<script>
+document.querySelectorAll('.time-cell').forEach(el => {
+  const utc = el.getAttribute('data-time');
+  if (!utc) return;
+  const d = new Date(utc + 'Z');
+  const pad = n => String(n).padStart(2, '0');
+  const local = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  el.textContent = local;
+});
+</script>
+{% endblock %}

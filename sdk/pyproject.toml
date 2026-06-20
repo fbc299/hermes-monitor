@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-monitor"
+version = "0.1.0"
+description = "Optional lightweight SDK for the Hermes Monitor LLM observability app."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "personal" }]
+keywords = ["llm", "observability", "langfuse", "hermes", "tracing"]
+# No required runtime deps: falls back to urllib when requests is absent.
+dependencies = []
+
+[project.optional-dependencies]
+requests = ["requests>=2.28"]
+dev = ["pytest>=8", "responses>=0.25"]
+
+[project.urls]
+Homepage = "https://github.com/NousResearch/hermes-agent"
+
+[tool.setuptools.packages.find]
+include = ["hermes_monitor*"]

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}设置{% endblock %}
+{% block content %}
+<style>
+  .settings-card { max-width: 680px; margin: 24px auto; }
+  .setting-group { margin-bottom: 20px; }
+  .setting-label { font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .setting-hint { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .setting-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--panel2); color: var(--text); }
+  .setting-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(79,156,249,0.15); }
+  .btn-row { display: flex; gap: 12px; margin-top: 24px; }
+  .btn { padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+  .btn-primary { background: var(--accent); color: #fff; } .btn-primary:hover { background: #3b82f6; }
+  .btn-secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); } .btn-secondary:hover { background: var(--border); }
+  .toast { padding: 12px 20px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; display: none; }
+  .toast.success { background: rgba(52,211,153,.12); color: var(--green); border: 1px solid rgba(52,211,153,.3); display: block; }
+  .toast.error { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); display: block; }
+</style>
+
+<div class="settings-card">
+  <h2>⚙ 设置</h2>
+  <p class="muted" style="margin-top:4px">在此处修改的配置即时生效，无需重启，重启后仍保留。</p>
+  <div id="toast" class="toast"></div>
+  <form id="settingsForm">
+    <div class="setting-group">
+      <div class="setting-label">上游地址 <span style="color:var(--red)">*</span></div>
+      <div class="setting-hint">LLM 提供商地址，例如 https://openrouter.ai/api/v1</div>
+      <input class="setting-input" name="UPSTREAM_BASE_URL" placeholder="https://openrouter.ai/api/v1" />
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">上游 API Key <span style="color:var(--red)">*</span></div>
+      <div class="setting-hint">LLM 提供商的 API 密钥</div>
+      <input class="setting-input" name="UPSTREAM_API_KEY" type="password" placeholder="sk-xxxxx" />
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">访问口令 <span class="muted">(可选)</span></div>
+      <div class="setting-hint">设置后看板和 API 需要此口令（URL 加 ?token= 或 Authorization 头）</div>
+      <input class="setting-input" name="ACCESS_TOKEN" type="password" placeholder="留空则不验证" />
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">上游超时 (秒)</div>
+      <div class="setting-hint">等待 LLM 提供商响应的最大时间</div>
+      <input class="setting-input" name="UPSTREAM_TIMEOUT" type="number" value="120" style="width:120px" />
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary">保存设置</button>
+      <a href="/{% if token %}?token={{ token }}{% endif %}" class="btn btn-secondary">← 返回看板</a>
+    </div>
+  </form>
+</div>
+
+<script>
+const token = '{{ token | e }}';
+const form = document.getElementById('settingsForm');
+const toast = document.getElementById('toast');
+function showToast(msg, ok) {
+  toast.textContent = msg;
+  toast.className = 'toast ' + (ok ? 'success' : 'error');
+  setTimeout(function(){ toast.className = 'toast'; }, 4000);
+}
+fetch('/api/v1/settings?token=' + encodeURIComponent(token))
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var data = d.data || {};
+    for (var k in data) {
+      var el = form.elements[k];
+      if (el) el.value = data[k];
+    }
+  })
+  .catch(function(){ showToast('加载配置失败', false); });
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+  var payload = {};
+  for (var i = 0; i < form.elements.length; i++) {
+    var el = form.elements[i];
+    if (el.name) payload[el.name] = el.value.trim();
+  }
+  fetch('/api/v1/settings?token=' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(function(r){
+    if (r.ok) {
+      showToast('✅ 设置已保存，即时生效', true);
+    } else {
+      return r.json().then(function(err){ showToast('保存失败: ' + (err.detail || r.status), false); });
+    }
+  }).catch(function(err){ showToast('网络错误: ' + err.message, false); });
+});
+</script>
+{% endblock %}

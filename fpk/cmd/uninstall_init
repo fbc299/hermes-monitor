@@ -1,0 +1,5 @@
+#!/bin/bash
+# uninstall_init — called before the container is stopped and removed.
+
+echo "Hermes Monitor: preparing uninstall..."
+echo "Note: data in /var/apps/hermes-monitor/shares/hermes-monitor/data/ will be preserved."

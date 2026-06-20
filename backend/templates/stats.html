@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}统计 · Hermes 监控{% endblock %}
+{% block nav_stats %}active{% endblock %}
+
+{% block content %}
+<h3 style="margin-top:0;">每日调用趋势（近 14 天）</h3>
+<div class="card">
+  <div class="bars">
+    {% for d in trend %}
+    <div class="bar-col" title="{{ d.day }}: {{ d.calls }} 次 ${{ '%.4f'|format(d.cost) }}">
+      <div class="bar" style="height: {{ (d.calls / max_calls * 100)|round }}%"></div>
+      <div class="bar-day">{{ d.day[5:] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<h3>按模型分组</h3>
+<table><thead><tr><th>模型</th><th>调用次数</th><th>Token</th><th>费用 (USD)</th><th>平均延迟</th></tr></thead>
+<tbody>
+{% for m in models %}<tr>
+  <td class="mono">{{ m.model }}</td>
+  <td>{{ m.calls }}</td>
+  <td class="mono">{{ "{:,}".format(m.total_tokens) }}</td>
+  <td class="mono">${{ "%.4f"|format(m.cost) }}</td>
+  <td class="mono">{{ m.avg_latency_ms }} ms</td>
+</tr>{% else %}<tr><td colspan="5" class="empty">暂无数据</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

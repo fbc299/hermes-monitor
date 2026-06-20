@@ -1,0 +1,14 @@
+services:
+  hermes-monitor:
+    image: {{DOCKERHUB_REPO}}:{{IMAGE_TAG}}
+    container_name: hermes-monitor
+    restart: unless-stopped
+    ports:
+      - "8480:8000"
+    volumes:
+      - "/var/apps/hermes-monitor/shares/hermes-monitor/data:/app/data"
+    environment:
+      - DB_PATH=/app/data/monitor.db
+      - PORT=8000
+      # UPSTREAM_BASE_URL / UPSTREAM_API_KEY / ACCESS_TOKEN are optional
+      # as env vars; they can be configured through the web UI at /settings

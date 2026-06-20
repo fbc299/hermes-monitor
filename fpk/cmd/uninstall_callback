@@ -1,0 +1,6 @@
+#!/bin/bash
+# uninstall_callback — called after the container and image are removed.
+
+echo "Hermes Monitor uninstalled."
+echo "To fully remove data, manually delete:"
+echo "  /var/apps/hermes-monitor/"

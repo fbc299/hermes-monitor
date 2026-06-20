@@ -1,0 +1,10 @@
+appname               = hermes-monitor
+version               = {{VERSION}}
+display_name          = Hermes Monitor
+desc                  = Lightweight LLM call tracing and dashboard (Langfuse-style). Reverse-proxies Hermes Agent OpenAI-compatible calls, records prompt/token/latency/cost. Python FastAPI + SQLite single process. All settings configurable via web UI — no file editing needed.
+arch                  = x86_64
+source                = thirdparty
+maintainer            = personal
+distributor           = personal
+desktop_uidir         = ui
+desktop_applaunchname = hermes-monitor.Application

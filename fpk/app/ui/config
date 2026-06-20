@@ -1,0 +1,13 @@
+{
+    ".url": {
+        "hermes-monitor.Application": {
+            "title": "Hermes 监控",
+            "icon": "images/icon_{0}.png",
+            "type": "url",
+            "protocol": "",
+            "port": "8480",
+            "url": "/",
+            "allUsers": false
+        }
+    }
+}

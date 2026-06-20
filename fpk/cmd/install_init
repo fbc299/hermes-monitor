@@ -1,0 +1,5 @@
+#!/bin/bash
+# install_init — called before the Docker container is pulled and started.
+# Use this to create any required directories or show post-install notes.
+
+echo "Hermes Monitor: preparing installation..."

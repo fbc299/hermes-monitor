@@ -1,0 +1,4 @@
+#!/bin/bash
+# upgrade_init — called before the Docker image is pulled.
+
+echo "Hermes Monitor: preparing upgrade..."
