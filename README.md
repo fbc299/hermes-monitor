@@ -2,6 +2,8 @@
 
 > 轻量级 LLM 调用追踪与监控看板 — 为 Hermes Agent 和飞牛 NAS 低配硬件设计
 
+> 最新功能更新详见 [`CHANGELOG.md`](CHANGELOG.md)，包括可视化配置、多上游诊断、错误中心、数据导出、自动刷新和隐私保存开关。
+
 ## 概述
 
 Hermes Monitor 是一个零侵入的 LLM 调用监控代理，工作在 Hermes Agent 和真正的 LLM 提供商之间。所有 LLM 请求自动经过代理并被记录，提供实时调用追踪、token 统计、费用估算和可视化看板。
