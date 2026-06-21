@@ -11,7 +11,12 @@
   <div class="card"><div class="label">错误率</div><div class="value" style="color: {% if overview.error_rate > 0 %}var(--red){% else %}var(--green){% endif %}">{{ overview.error_rate }}%</div><div class="sub">{{ overview.error_count }} / {{ overview.total_calls }} 次错误</div></div>
 </div>
 
-<div style="text-align:right; margin-bottom:16px;"><a href="/settings{% if token %}?token={{ token }}{% endif %}" style="background:var(--panel);padding:8px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;">⚙ 设置</a></div>
+<div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+  <label class="muted" style="display:flex;gap:6px;align-items:center;font-size:13px;"><input type="checkbox" id="autoRefresh"> 自动刷新 10 秒</label>
+  <a href="/api/v1/export/traces.csv{% if token %}?token={{ token }}{% endif %}" style="background:var(--panel);padding:8px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;">导出 CSV</a>
+  <a href="/api/v1/export/traces.json{% if token %}?token={{ token }}{% endif %}" style="background:var(--panel);padding:8px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;">导出 JSON</a>
+  <a href="/settings{% if token %}?token={{ token }}{% endif %}" style="background:var(--panel);padding:8px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;">⚙ 设置</a>
+</div>
 
 {% if not upstream or upstream == "(not configured)" %}
 <div class="card" style="border-color: var(--amber); background: rgba(251,191,36,.08); margin-bottom: 20px;">
@@ -51,5 +56,14 @@ document.querySelectorAll('.time-cell').forEach(el => {
   const local = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   el.textContent = local;
 });
+const autoRefresh = document.getElementById('autoRefresh');
+const refreshKey = 'hermes-monitor-auto-refresh';
+autoRefresh.checked = localStorage.getItem(refreshKey) === '1';
+autoRefresh.addEventListener('change', () => {
+  localStorage.setItem(refreshKey, autoRefresh.checked ? '1' : '0');
+});
+setInterval(() => {
+  if (localStorage.getItem(refreshKey) === '1') window.location.reload();
+}, 10000);
 </script>
 {% endblock %}

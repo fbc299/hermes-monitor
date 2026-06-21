@@ -19,10 +19,12 @@ log = logging.getLogger(__name__)
 # Keys that are user-configurable through the settings UI.
 # (DB_PATH and PORT remain env-only to avoid chicken-and-egg issues.)
 _CONFIG_KEYS = [
+    "UPSTREAMS_JSON",
     "UPSTREAM_BASE_URL",
     "UPSTREAM_API_KEY",
     "UPSTREAM_TIMEOUT",
     "ACCESS_TOKEN",
+    "PAYLOAD_STORAGE_MODE",
 ]
 
 

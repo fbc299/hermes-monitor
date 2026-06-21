@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}错误中心 · Hermes 监控{% endblock %}
+{% block nav_errors %}active{% endblock %}
+
+{% block content %}
+<h2 style="margin-top:0">错误中心</h2>
+<p class="muted">聚合最近上游失败、超时和代理错误，方便快速定位坏掉的 Provider 或模型。</p>
+
+<div class="cards">
+  <div class="card"><div class="label">总错误数</div><div class="value" style="color:var(--red)">{{ errors.total_errors }}</div></div>
+  <div class="card"><div class="label">异常 Provider</div><div class="value">{{ errors.by_provider|length }}</div></div>
+  <div class="card"><div class="label">异常模型</div><div class="value">{{ errors.by_model|length }}</div></div>
+</div>
+
+<div class="grid2">
+  <div>
+    <h3>按 Provider 分组</h3>
+    <table><thead><tr><th>Provider</th><th>错误数</th><th>最近出现</th></tr></thead><tbody>
+      {% for row in errors.by_provider %}
+      <tr><td class="mono">{{ row.provider }}</td><td>{{ row.errors }}</td><td class="mono time-cell" data-time="{{ row.last_seen }}">{{ row.last_seen or "—" }}</td></tr>
+      {% else %}<tr><td colspan="3" class="empty">暂无错误</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div>
+    <h3>按模型分组</h3>
+    <table><thead><tr><th>模型</th><th>错误数</th><th>最近出现</th></tr></thead><tbody>
+      {% for row in errors.by_model %}
+      <tr><td class="mono">{{ row.model }}</td><td>{{ row.errors }}</td><td class="mono time-cell" data-time="{{ row.last_seen }}">{{ row.last_seen or "—" }}</td></tr>
+      {% else %}<tr><td colspan="3" class="empty">暂无错误</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+
+<h3>错误原因 Top 10</h3>
+<table><thead><tr><th>错误</th><th>次数</th><th>最近出现</th></tr></thead><tbody>
+  {% for row in errors.by_message %}
+  <tr><td class="mono">{{ row.message }}</td><td>{{ row.errors }}</td><td class="mono time-cell" data-time="{{ row.last_seen }}">{{ row.last_seen or "—" }}</td></tr>
+  {% else %}<tr><td colspan="3" class="empty">暂无错误</td></tr>{% endfor %}
+</tbody></table>
+
+<h3>最近错误</h3>
+<table><thead><tr><th>时间</th><th>Provider</th><th>模型</th><th>延迟</th><th>错误</th><th>详情</th></tr></thead><tbody>
+  {% for row in errors.recent %}
+  <tr>
+    <td class="mono time-cell" data-time="{{ row.created_at }}">{{ row.created_at or "—" }}</td>
+    <td class="mono">{{ row.provider or "—" }}</td>
+    <td class="mono">{{ row.model or "—" }}</td>
+    <td class="mono">{{ row.latency_ms or "—" }} ms</td>
+    <td class="mono">{{ row.error_msg or "—" }}</td>
+    <td><a href="/call/{{ row.id }}{% if token %}?token={{ token }}{% endif %}">查看</a></td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="empty">暂无错误</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

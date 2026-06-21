@@ -128,6 +128,55 @@ def recent_calls(limit: int = 50, **filters: Any) -> list[dict[str, Any]]:
         return [_generation_to_dict(g) for g in gens]
 
 
+def error_summary(limit: int = 50) -> dict[str, Any]:
+    """Grouped error diagnostics for the error center."""
+    with session_scope() as db:
+        total = db.execute(
+            select(func.count(Generation.id)).where(Generation.status == GenStatus.ERROR)
+        ).one()[0]
+        provider_rows = db.execute(
+            select(Generation.provider, func.count(Generation.id), func.max(Generation.created_at))
+            .where(Generation.status == GenStatus.ERROR)
+            .group_by(Generation.provider)
+            .order_by(func.count(Generation.id).desc())
+        ).all()
+        model_rows = db.execute(
+            select(Generation.model, func.count(Generation.id), func.max(Generation.created_at))
+            .where(Generation.status == GenStatus.ERROR)
+            .group_by(Generation.model)
+            .order_by(func.count(Generation.id).desc())
+        ).all()
+        message_rows = db.execute(
+            select(Generation.error_msg, func.count(Generation.id), func.max(Generation.created_at))
+            .where(Generation.status == GenStatus.ERROR)
+            .group_by(Generation.error_msg)
+            .order_by(func.count(Generation.id).desc())
+            .limit(10)
+        ).all()
+        recent_rows = db.execute(
+            select(Generation)
+            .where(Generation.status == GenStatus.ERROR)
+            .order_by(Generation.created_at.desc())
+            .limit(limit)
+        ).scalars().all()
+    return {
+        "total_errors": int(total or 0),
+        "by_provider": [
+            {"provider": row[0] or "(unknown)", "errors": int(row[1] or 0), "last_seen": row[2].isoformat() if row[2] else None}
+            for row in provider_rows
+        ],
+        "by_model": [
+            {"model": row[0] or "(unknown)", "errors": int(row[1] or 0), "last_seen": row[2].isoformat() if row[2] else None}
+            for row in model_rows
+        ],
+        "by_message": [
+            {"message": row[0] or "(no message)", "errors": int(row[1] or 0), "last_seen": row[2].isoformat() if row[2] else None}
+            for row in message_rows
+        ],
+        "recent": [_generation_to_dict(row) for row in recent_rows],
+    }
+
+
 def _generation_to_dict(g: Generation) -> dict[str, Any]:
     """Serialize a Generation row for the API / template."""
     return {

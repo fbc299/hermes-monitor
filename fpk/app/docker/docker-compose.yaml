@@ -10,5 +10,6 @@ services:
     environment:
       - DB_PATH=/app/data/monitor.db
       - PORT=8000
-      # UPSTREAM_BASE_URL / UPSTREAM_API_KEY / ACCESS_TOKEN are optional
-      # as env vars; they can be configured through the web UI at /settings
+      # UPSTREAMS_JSON enables multi-provider/model routing and can also be
+      # configured through the web UI at /settings. Legacy single-upstream
+      # UPSTREAM_BASE_URL / UPSTREAM_API_KEY / ACCESS_TOKEN remain supported.

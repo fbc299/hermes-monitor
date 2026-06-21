@@ -33,6 +33,41 @@ Hermes Agent ──(base_url)──► Hermes Monitor ──(透传)──► LL
 4. 在响应返回时捕获 prompt/completion/token/延迟/费用
 5. 持久化到 SQLite 数据库
 
+## 多模型 / 多上游厂商并行监控
+
+Hermes Monitor 现在支持配置多个 OpenAI 兼容上游，并按请求体里的 `model` 自动路由到对应厂商。旧版 `UPSTREAM_BASE_URL` / `UPSTREAM_API_KEY` 仍可继续使用；配置了 `UPSTREAMS_JSON` 后优先使用多上游。
+
+### `UPSTREAMS_JSON` 示例
+
+```json
+[
+  {
+    "name": "openai",
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "sk-...",
+    "models": ["gpt-*", "o*"]
+  },
+  {
+    "name": "deepseek",
+    "base_url": "https://api.deepseek.com/v1",
+    "api_key": "sk-...",
+    "models": ["deepseek-*"]
+  },
+  {
+    "name": "qwen",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "api_key": "sk-...",
+    "models": ["qwen-*"]
+  }
+]
+```
+
+路由规则：
+- `models` 支持 `*` 通配符，例如 `gpt-*`、`claude-*`。
+- 请求模型命中第一个匹配上游；没有匹配时使用 `models` 为空或包含 `*` 的默认上游；仍没有默认上游时使用第一个上游。
+- `/v1/models` 会并行请求所有已配置上游并合并返回，单个上游失败时在 `upstream_errors` 中报告，不影响其他上游模型列表。
+- 生成记录会写入实际命中的 `provider` 和 `base_url`，看板可区分不同厂商与模型。
+
 ## 代码详解
 
 ### 1. `proxy.py` — 核心反向代理

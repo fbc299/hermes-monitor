@@ -67,6 +67,7 @@ def fresh_db(monkeypatch, tmp_path):
     monkeypatch.setenv("DB_PATH", db_file)
     monkeypatch.setenv("UPSTREAM_BASE_URL", "")
     monkeypatch.setenv("UPSTREAM_API_KEY", "")
+    monkeypatch.setenv("UPSTREAMS_JSON", "")
     monkeypatch.setenv("ACCESS_TOKEN", "")
 
     # 1. Reload everything so config picks up the env vars above.
@@ -100,7 +101,7 @@ def client(app):
 @pytest.fixture()
 def configured_upstream(monkeypatch):
     """Set upstream env vars and reload config+modules so proxy sees them.
-    
+
     Does NOT touch ``app.db`` so the engine from ``fresh_db`` stays intact.
     """
     monkeypatch.setenv("UPSTREAM_BASE_URL", "https://upstream.example.com")

@@ -155,3 +155,92 @@ def test_missing_upstream_config_returns_503(client):
     resp = client.post("/v1/chat/completions", json={"model": "gpt-4o", "messages": []})
     assert resp.status_code == 503
     assert "UPSTREAM_BASE_URL" in resp.json()["error"]["message"]
+
+
+
+def test_model_routes_to_matching_upstream(proxy_client, fresh_db, monkeypatch):
+    from app import config as config_module
+
+    monkeypatch.setenv(
+        "UPSTREAMS_JSON",
+        json.dumps(
+            [
+                {
+                    "name": "openai",
+                    "base_url": "https://openai.example.com/v1",
+                    "api_key": "openai-key",
+                    "models": ["gpt-*"],
+                },
+                {
+                    "name": "deepseek",
+                    "base_url": "https://deepseek.example.com/v1",
+                    "api_key": "deepseek-key",
+                    "models": ["deepseek-*"],
+                },
+            ]
+        ),
+    )
+    importlib.reload(config_module)
+    from app import proxy as proxy_module
+    importlib.reload(proxy_module)
+
+    seen_headers = {}
+
+    def _capture(request):
+        seen_headers.update(request.headers)
+        return Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    with respx.mock(assert_all_called=False) as mock:
+        mock.post("https://deepseek.example.com/v1/chat/completions").mock(side_effect=_capture)
+        resp = proxy_client.post(
+            "/v1/chat/completions",
+            json={"model": "deepseek-chat", "messages": [{"role": "user", "content": "hi"}]},
+            headers={"Authorization": "Bearer client-key"},
+        )
+
+    assert resp.status_code == 200
+    assert seen_headers.get("authorization") == "Bearer deepseek-key"
+    with fresh_db.session_scope() as db:
+        g = db.query(Generation).one()
+        assert g.provider == "deepseek"
+        assert g.base_url == "https://deepseek.example.com/v1"
+
+
+def test_models_endpoint_merges_all_configured_upstreams(proxy_client, monkeypatch):
+    from app import config as config_module
+
+    monkeypatch.setenv(
+        "UPSTREAMS_JSON",
+        json.dumps(
+            [
+                {
+                    "name": "openai",
+                    "base_url": "https://openai.example.com/v1",
+                    "api_key": "openai-key",
+                    "models": ["gpt-*"],
+                },
+                {
+                    "name": "qwen",
+                    "base_url": "https://qwen.example.com/v1",
+                    "api_key": "qwen-key",
+                    "models": ["qwen-*"],
+                },
+            ]
+        ),
+    )
+    importlib.reload(config_module)
+    from app import proxy as proxy_module
+    importlib.reload(proxy_module)
+
+    with respx.mock(assert_all_called=True) as mock:
+        mock.get("https://openai.example.com/v1/models").mock(
+            return_value=Response(200, json={"object": "list", "data": [{"id": "gpt-4o", "object": "model"}]})
+        )
+        mock.get("https://qwen.example.com/v1/models").mock(
+            return_value=Response(200, json={"object": "list", "data": [{"id": "qwen-plus", "object": "model"}]})
+        )
+        resp = proxy_client.get("/v1/models")
+
+    assert resp.status_code == 200
+    ids = {item["id"] for item in resp.json()["data"]}
+    assert ids == {"gpt-4o", "qwen-plus"}

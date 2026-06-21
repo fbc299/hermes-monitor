@@ -46,6 +46,18 @@ def _truncate_payload(value: Any, max_bytes: int) -> Any:
     return {"_truncated": True, "_original_bytes": size, "_preview": text[:512]}
 
 
+def _payload_for_storage(value: Any, max_bytes: int) -> Any:
+    """Apply privacy mode and size limits before storing payload JSON."""
+    try:
+        from .config import settings
+
+        if settings.payload_storage_mode == "metrics_only":
+            return {"_redacted": True, "reason": "metrics_only"}
+    except Exception:
+        pass
+    return _truncate_payload(value, max_bytes)
+
+
 def upsert_trace(
     db: Session,
     trace_id: str | None,
@@ -114,8 +126,8 @@ def record_generation(
         model=model,
         source=source,
         status=status,
-        prompt_json=_truncate_payload(prompt_json, max_payload_bytes),
-        completion_json=_truncate_payload(completion_json, max_payload_bytes),
+        prompt_json=_payload_for_storage(prompt_json, max_payload_bytes),
+        completion_json=_payload_for_storage(completion_json, max_payload_bytes),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         total_tokens=total_tokens,

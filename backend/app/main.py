@@ -12,6 +12,9 @@ from fastapi import FastAPI
 from .api import settings as settings_api
 from .api import stats as stats_api
 from .api import traces as traces_api
+from .api import providers as providers_api
+from .api import errors as errors_api
+from .api import export as export_api
 from .config import settings
 from .db import init_db
 from .ingestion import router as ingestion_router
@@ -50,6 +53,9 @@ def create_app() -> FastAPI:
     # /{path:path} route would otherwise shadow everything below it).
     app.include_router(pages_router)
     app.include_router(settings_api.router)
+    app.include_router(providers_api.router)
+    app.include_router(errors_api.router)
+    app.include_router(export_api.router)
     app.include_router(traces_api.router)
     app.include_router(stats_api.router)
     app.include_router(ingestion_router)

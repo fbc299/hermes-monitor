@@ -41,6 +41,7 @@ pre{background:var(--panel2);border:1px solid var(--border);border-radius:8px;pa
 <nav>
 <a href="/{% if token %}?token={{ token }}{% endif %}" class="{% block nav_overview %}{% endblock %}">概览</a>
 <a href="/stats{% if token %}?token={{ token }}{% endif %}" class="{% block nav_stats %}{% endblock %}">统计</a>
+<a href="/errors{% if token %}?token={{ token }}{% endif %}" class="{% block nav_errors %}{% endblock %}">错误中心</a>
 <a href="/settings{% if token %}?token={{ token }}{% endif %}" class="{% block nav_settings %}{% endblock %}">⚙ 设置</a>
 </nav>
 </header>

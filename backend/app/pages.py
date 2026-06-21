@@ -7,19 +7,20 @@ per-model table and a pure-HTML daily bar trend.
 from __future__ import annotations
 
 import html
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from .aggregation import by_model, daily_trend, get_generation, overview, recent_calls
+from .aggregation import by_model, daily_trend, error_summary, get_generation, overview, recent_calls
 from .auth import require_write
 from .settings_service import get_all_config
 from .config import settings
 
 router = APIRouter(include_in_schema=False)
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
 def _short(s: Any, n: int = 120) -> str:
@@ -125,6 +126,17 @@ async def stats_page(request: Request) -> HTMLResponse:
         },
     )
 
+
+@router.get("/errors", response_class=HTMLResponse)
+async def errors_page(request: Request) -> HTMLResponse:
+    """Error center: grouped recent upstream failures."""
+    require_write(request)
+    token = request.query_params.get("token", "")
+    return templates.TemplateResponse(
+        request,
+        "errors.html",
+        {"errors": error_summary(limit=50), "token": token},
+    )
 
 
 @router.get("/settings", response_class=HTMLResponse)

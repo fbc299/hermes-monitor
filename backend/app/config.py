@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
+from .upstreams import UpstreamProvider, parse_upstreams
+
 
 def _env(key: str, default: str = "") -> str:
     """Read an environment variable, defaulting to an empty string."""
@@ -48,6 +50,18 @@ class Settings:
     def upstream_api_key(self) -> str:
         return _db_or_env("UPSTREAM_API_KEY", "")
 
+    @property
+    def upstreams_json(self) -> str:
+        return _db_or_env("UPSTREAMS_JSON", "")
+
+    @property
+    def upstreams(self) -> list[UpstreamProvider]:
+        return parse_upstreams(
+            self.upstreams_json,
+            legacy_base_url=self.upstream_base_url,
+            legacy_api_key=self.upstream_api_key,
+        )
+
     # --- Security -------------------------------------------------------
     # Optional simple bearer token for the dashboard / management API.
     # When set, browser/API access requires `?token=` or Authorization header.
@@ -64,6 +78,11 @@ class Settings:
         except ValueError:
             return 120.0
 
+    @property
+    def payload_storage_mode(self) -> str:
+        mode = _db_or_env("PAYLOAD_STORAGE_MODE", "full").strip().lower()
+        return mode if mode in {"full", "metrics_only"} else "full"
+
     # Max body size (bytes) we persist to SQLite for prompt/completion JSON.
     max_payload_bytes: int = field(
         default_factory=lambda: int(_env("MAX_PAYLOAD_BYTES", str(256 * 1024)))
@@ -72,7 +91,7 @@ class Settings:
     @property
     def upstream_configured(self) -> bool:
         """Whether a real upstream provider has been configured."""
-        return bool(self.upstream_base_url)
+        return bool(self.upstreams)
 
     @property
     def auth_enabled(self) -> bool:

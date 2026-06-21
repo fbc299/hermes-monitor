@@ -1,50 +1,156 @@
 {% extends "base.html" %}
 {% block title %}设置{% endblock %}
+{% block nav_settings %}active{% endblock %}
 {% block content %}
 <style>
-  .settings-card { max-width: 680px; margin: 24px auto; }
-  .setting-group { margin-bottom: 20px; }
-  .setting-label { font-weight: 600; margin-bottom: 4px; color: var(--text); }
-  .setting-hint { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-  .setting-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--panel2); color: var(--text); }
-  .setting-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(79,156,249,0.15); }
-  .btn-row { display: flex; gap: 12px; margin-top: 24px; }
-  .btn { padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
-  .btn-primary { background: var(--accent); color: #fff; } .btn-primary:hover { background: #3b82f6; }
-  .btn-secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); } .btn-secondary:hover { background: var(--border); }
-  .toast { padding: 12px 20px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; display: none; }
-  .toast.success { background: rgba(52,211,153,.12); color: var(--green); border: 1px solid rgba(52,211,153,.3); display: block; }
-  .toast.error { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); display: block; }
+  .settings-shell { max-width: 980px; margin: 24px auto; }
+  .hero { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:18px; }
+  .hero h2 { margin:0 0 6px; }
+  .hero p { margin:0; }
+  .section { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .section-title { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:14px; }
+  .section-title h3 { margin:0; font-size:16px; }
+  .section-title p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+  .provider-list { display:grid; gap:12px; }
+  .provider-card { background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .provider-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+  .provider-title { font-weight:700; }
+  .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field.full { grid-column:1 / -1; }
+  .field label { font-weight:600; color:var(--text); font-size:13px; }
+  .hint { color:var(--muted); font-size:12px; }
+  .input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#11141a; color:var(--text); }
+  .input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px rgba(79,156,249,.15); }
+  textarea.input { min-height:120px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; line-height:1.45; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  .btn { padding:10px 18px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; border:1px solid transparent; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .btn:hover { text-decoration:none; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#3b82f6; }
+  .btn-secondary { background:var(--panel2); color:var(--text); border-color:var(--border); }
+  .btn-secondary:hover { background:var(--border); }
+  .btn-danger { background:rgba(248,113,113,.12); color:var(--red); border-color:rgba(248,113,113,.35); }
+  .quick-presets { display:flex; gap:8px; flex-wrap:wrap; }
+  .preset { padding:7px 10px; border-radius:999px; background:rgba(79,156,249,.12); color:var(--accent); border:1px solid rgba(79,156,249,.28); cursor:pointer; font-size:12px; }
+  .status-line { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .badge { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; background:rgba(79,156,249,.12); color:var(--accent); font-size:12px; }
+  .badge.warn { background:rgba(251,191,36,.12); color:var(--amber); }
+  .badge.ok { background:rgba(52,211,153,.12); color:var(--green); }
+  .badge.err { background:rgba(248,113,113,.12); color:var(--red); }
+  .mini-table { width:100%; margin-top:12px; border-radius:10px; overflow:hidden; border:1px solid var(--border); }
+  .mini-table th,.mini-table td { padding:9px 10px; font-size:12px; vertical-align:top; }
+  .mini-table td { background:#11141a; }
+  .toast { padding:12px 14px; border-radius:8px; margin-bottom:16px; font-size:14px; display:none; }
+  .toast.success { background:rgba(52,211,153,.12); color:var(--green); border:1px solid rgba(52,211,153,.3); display:block; }
+  .toast.error { background:rgba(248,113,113,.12); color:var(--red); border:1px solid rgba(248,113,113,.3); display:block; }
+  .empty { border:1px dashed var(--border); border-radius:10px; padding:22px; text-align:center; color:var(--muted); background:rgba(255,255,255,.02); }
+  details.advanced { margin-top:14px; }
+  details.advanced summary { cursor:pointer; color:var(--muted); }
+  @media(max-width:760px){ .hero,.section-title{display:block}.field-grid{grid-template-columns:1fr}.actions .btn{width:100%} }
 </style>
 
-<div class="settings-card">
-  <h2>⚙ 设置</h2>
-  <p class="muted" style="margin-top:4px">在此处修改的配置即时生效，无需重启，重启后仍保留。</p>
+<div class="settings-shell">
+  <div class="hero">
+    <div>
+      <h2>⚙ 可视化设置</h2>
+      <p class="muted">不用手写配置。填写上游地址、密钥和模型匹配规则，保存后立即生效，重启后仍保留。</p>
+      <div class="status-line">
+        <span class="badge" id="providerCount">0 个上游</span>
+        <span class="badge warn" id="routingHint">未配置默认路由</span>
+      </div>
+    </div>
+    <a href="/{% if token %}?token={{ token }}{% endif %}" class="btn btn-secondary">← 返回看板</a>
+  </div>
+
   <div id="toast" class="toast"></div>
+
   <form id="settingsForm">
-    <div class="setting-group">
-      <div class="setting-label">上游地址 <span style="color:var(--red)">*</span></div>
-      <div class="setting-hint">LLM 提供商地址，例如 https://openrouter.ai/api/v1</div>
-      <input class="setting-input" name="UPSTREAM_BASE_URL" placeholder="https://openrouter.ai/api/v1" />
-    </div>
-    <div class="setting-group">
-      <div class="setting-label">上游 API Key <span style="color:var(--red)">*</span></div>
-      <div class="setting-hint">LLM 提供商的 API 密钥</div>
-      <input class="setting-input" name="UPSTREAM_API_KEY" type="password" placeholder="sk-xxxxx" />
-    </div>
-    <div class="setting-group">
-      <div class="setting-label">访问口令 <span class="muted">(可选)</span></div>
-      <div class="setting-hint">设置后看板和 API 需要此口令（URL 加 ?token= 或 Authorization 头）</div>
-      <input class="setting-input" name="ACCESS_TOKEN" type="password" placeholder="留空则不验证" />
-    </div>
-    <div class="setting-group">
-      <div class="setting-label">上游超时 (秒)</div>
-      <div class="setting-hint">等待 LLM 提供商响应的最大时间</div>
-      <input class="setting-input" name="UPSTREAM_TIMEOUT" type="number" value="120" style="width:120px" />
-    </div>
-    <div class="btn-row">
-      <button type="submit" class="btn btn-primary">保存设置</button>
-      <a href="/{% if token %}?token={{ token }}{% endif %}" class="btn btn-secondary">← 返回看板</a>
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h3>上游 Provider</h3>
+          <p>每张卡片对应一个 OpenAI 兼容接口；模型规则支持通配符，例如 <span class="mono">gpt-*</span>、<span class="mono">qwen-*</span>、<span class="mono">*</span>。</p>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addProvider">＋ 添加上游</button>
+      </div>
+      <div class="quick-presets" aria-label="快速添加模板">
+        <button type="button" class="preset" data-preset="openai">OpenAI</button>
+        <button type="button" class="preset" data-preset="openrouter">OpenRouter</button>
+        <button type="button" class="preset" data-preset="deepseek">DeepSeek</button>
+        <button type="button" class="preset" data-preset="qwen">通义千问</button>
+        <button type="button" class="preset" data-preset="custom">自定义</button>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button type="button" class="btn btn-secondary" id="testProviders">测试所有上游</button>
+        <button type="button" class="btn btn-secondary" id="loadModels">刷新模型列表</button>
+      </div>
+      <div id="providerHealth"></div>
+      <h4 style="margin:18px 0 6px">模型路由预览</h4>
+      <div class="hint">刷新模型列表后会显示每个模型来自哪个 Provider，以及当前匹配规则。</div>
+      <div id="modelRoutes"></div>
+      <div id="providerList" class="provider-list" style="margin-top:14px"></div>
+      <div id="emptyProviders" class="empty" style="display:none">还没有上游。点击“添加上游”，或使用上方模板快速创建。</div>
+      <input type="hidden" name="UPSTREAMS_JSON" />
+      <details class="advanced">
+        <summary>高级：查看自动生成的 JSON</summary>
+        <textarea class="input" id="jsonPreview" spellcheck="false" readonly></textarea>
+        <div class="hint">这里由表单自动生成，仅用于复制或排查问题。</div>
+      </details>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h3>访问与性能</h3>
+          <p>访问口令可保护看板和管理 API；超时用于限制等待上游响应的时间。</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="ACCESS_TOKEN">访问口令（可选）</label>
+          <input class="input" id="ACCESS_TOKEN" name="ACCESS_TOKEN" type="password" autocomplete="new-password" placeholder="留空则不验证" />
+          <div class="hint">设置后可通过 URL 的 <span class="mono">?token=</span> 或 Authorization 头访问。</div>
+        </div>
+        <div class="field">
+          <label for="UPSTREAM_TIMEOUT">上游超时（秒）</label>
+          <input class="input" id="UPSTREAM_TIMEOUT" name="UPSTREAM_TIMEOUT" type="number" min="1" step="1" value="120" />
+          <div class="hint">建议 60–180 秒；流式长回复可适当调大。</div>
+        </div>
+        <div class="field">
+          <label for="PAYLOAD_STORAGE_MODE">保存 Prompt/Completion</label>
+          <select class="input" id="PAYLOAD_STORAGE_MODE" name="PAYLOAD_STORAGE_MODE">
+            <option value="full">保存完整内容</option>
+            <option value="metrics_only">只保存指标</option>
+          </select>
+          <div class="hint">选择“只保存指标”后，仅记录 token、费用、延迟和状态，不保存请求/回答正文。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">
+        <div>
+          <h3>兼容旧版单上游</h3>
+          <p>如果上面配置了多个上游，这里会自动留空；旧客户端仍可读取这些字段。</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="UPSTREAM_BASE_URL">单上游地址</label>
+          <input class="input" id="UPSTREAM_BASE_URL" name="UPSTREAM_BASE_URL" placeholder="https://openrouter.ai/api/v1" />
+        </div>
+        <div class="field">
+          <label for="UPSTREAM_API_KEY">单上游 API Key</label>
+          <input class="input" id="UPSTREAM_API_KEY" name="UPSTREAM_API_KEY" type="password" placeholder="sk-xxxxx" />
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">保存并立即生效</button>
+      <button type="button" class="btn btn-secondary" id="reloadSettings">重新加载</button>
+      <a href="/{% if token %}?token={{ token }}{% endif %}" class="btn btn-secondary">返回看板</a>
     </div>
   </form>
 </div>
@@ -53,26 +159,236 @@
 const token = '{{ token | e }}';
 const form = document.getElementById('settingsForm');
 const toast = document.getElementById('toast');
+const providerList = document.getElementById('providerList');
+const emptyProviders = document.getElementById('emptyProviders');
+const jsonPreview = document.getElementById('jsonPreview');
+const providerCount = document.getElementById('providerCount');
+const routingHint = document.getElementById('routingHint');
+const providerHealth = document.getElementById('providerHealth');
+const modelRoutes = document.getElementById('modelRoutes');
+let providers = [];
+
+const presets = {
+  openai: {name:'openai', base_url:'https://api.openai.com/v1', api_key:'', models:'gpt-*,o*'},
+  openrouter: {name:'openrouter', base_url:'https://openrouter.ai/api/v1', api_key:'', models:'*'},
+  deepseek: {name:'deepseek', base_url:'https://api.deepseek.com/v1', api_key:'', models:'deepseek-*'},
+  qwen: {name:'qwen', base_url:'https://dashscope.aliyuncs.com/compatible-mode/v1', api_key:'', models:'qwen-*'},
+  custom: {name:'custom', base_url:'', api_key:'', models:'*'}
+};
+
 function showToast(msg, ok) {
   toast.textContent = msg;
   toast.className = 'toast ' + (ok ? 'success' : 'error');
-  setTimeout(function(){ toast.className = 'toast'; }, 4000);
+  setTimeout(function(){ toast.className = 'toast'; }, 4500);
 }
-fetch('/api/v1/settings?token=' + encodeURIComponent(token))
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    var data = d.data || {};
-    for (var k in data) {
-      var el = form.elements[k];
-      if (el) el.value = data[k];
+
+function splitModels(value) {
+  return String(value || '').split(',').map(function(part){ return part.trim(); }).filter(Boolean);
+}
+
+function normalizedProviders() {
+  return providers.map(function(provider){
+    return {
+      name: String(provider.name || '').trim(),
+      base_url: String(provider.base_url || '').trim().replace(/\/+$/, ''),
+      api_key: String(provider.api_key || '').trim(),
+      models: splitModels(provider.models)
+    };
+  }).filter(function(provider){ return provider.base_url; });
+}
+
+function syncHiddenFields() {
+  const usable = normalizedProviders();
+  const json = usable.length ? JSON.stringify(usable, null, 2) : '';
+  form.elements.UPSTREAMS_JSON.value = json;
+  jsonPreview.value = json || '[]';
+
+  if (usable.length === 1) {
+    form.elements.UPSTREAM_BASE_URL.value = usable[0].base_url;
+    form.elements.UPSTREAM_API_KEY.value = usable[0].api_key;
+  } else if (usable.length > 1) {
+    form.elements.UPSTREAM_BASE_URL.value = '';
+    form.elements.UPSTREAM_API_KEY.value = '';
+  }
+
+  providerCount.textContent = usable.length + ' 个上游';
+  const hasDefault = usable.some(function(provider){ return provider.models.length === 0 || provider.models.indexOf('*') !== -1; });
+  routingHint.textContent = hasDefault ? '已配置默认路由' : '未配置默认路由';
+  routingHint.className = 'badge ' + (hasDefault ? '' : 'warn');
+}
+
+function updateProvider(index, key, value) {
+  providers[index][key] = value;
+  syncHiddenFields();
+}
+
+function removeProvider(index) {
+  providers.splice(index, 1);
+  renderProviders();
+}
+
+function renderProviders() {
+  providerList.innerHTML = '';
+  emptyProviders.style.display = providers.length ? 'none' : 'block';
+  providers.forEach(function(provider, index){
+    const card = document.createElement('div');
+    card.className = 'provider-card';
+    card.innerHTML = `
+      <div class="provider-head">
+        <div class="provider-title">上游 #${index + 1}</div>
+        <button type="button" class="btn btn-danger" data-action="remove">删除</button>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>名称</label>
+          <input class="input" data-field="name" placeholder="例如 openai" value="${escapeHtml(provider.name || '')}" />
+        </div>
+        <div class="field">
+          <label>模型匹配</label>
+          <input class="input" data-field="models" placeholder="例如 gpt-*, qwen-* 或 *" value="${escapeHtml(provider.models || '')}" />
+        </div>
+        <div class="field full">
+          <label>接口地址</label>
+          <input class="input" data-field="base_url" placeholder="https://api.example.com/v1" value="${escapeHtml(provider.base_url || '')}" />
+        </div>
+        <div class="field full">
+          <label>API Key</label>
+          <input class="input" data-field="api_key" type="password" autocomplete="new-password" placeholder="sk-..." value="${escapeHtml(provider.api_key || '')}" />
+          <div class="hint">客户端请求里的 Key 不会转发，上游始终使用这里保存的 Key。</div>
+        </div>
+      </div>`;
+    card.querySelector('[data-action="remove"]').addEventListener('click', function(){ removeProvider(index); });
+    card.querySelectorAll('[data-field]').forEach(function(input){
+      input.addEventListener('input', function(){ updateProvider(index, input.dataset.field, input.value); });
+    });
+    providerList.appendChild(card);
+  });
+  syncHiddenFields();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch];
+  });
+}
+
+function renderHealth(rows) {
+  if (!rows.length) {
+    providerHealth.innerHTML = '<div class="empty">暂无上游可测试</div>';
+    return;
+  }
+  providerHealth.innerHTML = '<table class="mini-table"><thead><tr><th>Provider</th><th>状态</th><th>模型数</th><th>延迟</th><th>错误</th></tr></thead><tbody>' + rows.map(function(row){
+    return '<tr><td class="mono">' + escapeHtml(row.name) + '</td><td><span class="badge ' + (row.ok ? 'ok' : 'err') + '">' + (row.ok ? '可用' : '异常') + '</span></td><td>' + row.model_count + '</td><td>' + row.latency_ms + ' ms</td><td class="mono">' + escapeHtml(row.error || '') + '</td></tr>';
+  }).join('') + '</tbody></table>';
+}
+
+function renderModels(rows) {
+  if (!rows.length) {
+    modelRoutes.innerHTML = '<div class="empty">没有拉到模型。请先测试上游或检查 API Key。</div>';
+    return;
+  }
+  modelRoutes.innerHTML = '<table class="mini-table"><thead><tr><th>模型</th><th>Provider</th><th>路由规则</th></tr></thead><tbody>' + rows.map(function(row){
+    return '<tr><td class="mono">' + escapeHtml(row.id) + '</td><td>' + escapeHtml(row.provider) + '</td><td class="mono">' + escapeHtml((row.routing_patterns || []).join(', ') || '—') + '</td></tr>';
+  }).join('') + '</tbody></table>';
+}
+
+function fetchProviderHealth() {
+  providerHealth.innerHTML = '<div class="hint">正在测试上游...</div>';
+  fetch('/api/v1/providers/health?token=' + encodeURIComponent(token))
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){ renderHealth(d.data || []); })
+    .catch(function(err){ providerHealth.innerHTML = ''; showToast('测试上游失败: ' + err.message, false); });
+}
+
+function fetchProviderModels() {
+  modelRoutes.innerHTML = '<div class="hint">正在刷新模型列表...</div>';
+  fetch('/api/v1/providers/models?token=' + encodeURIComponent(token))
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){ renderModels(d.data || []); })
+    .catch(function(err){ modelRoutes.innerHTML = ''; showToast('刷新模型列表失败: ' + err.message, false); });
+}
+
+function addProvider(provider) {
+  providers.push(Object.assign({}, presets.custom, provider || {}));
+  renderProviders();
+}
+
+function loadProvidersFromConfig(data) {
+  providers = [];
+  const raw = String(data.UPSTREAMS_JSON || '').trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      const items = Array.isArray(parsed) ? parsed : (parsed.providers || parsed.upstreams || []);
+      if (Array.isArray(items)) {
+        providers = items.map(function(item){
+          return {
+            name: item.name || '',
+            base_url: item.base_url || item.url || '',
+            api_key: item.api_key || item.key || '',
+            models: Array.isArray(item.models) ? item.models.join(', ') : (item.models || '')
+          };
+        }).filter(function(item){ return item.base_url; });
+      }
+    } catch (err) {
+      showToast('已有多上游 JSON 无法解析，请检查旧配置', false);
     }
-  })
-  .catch(function(){ showToast('加载配置失败', false); });
+  }
+  if (!providers.length && data.UPSTREAM_BASE_URL) {
+    providers = [{
+      name: providerNameFromUrl(data.UPSTREAM_BASE_URL),
+      base_url: data.UPSTREAM_BASE_URL,
+      api_key: data.UPSTREAM_API_KEY || '',
+      models: '*'
+    }];
+  }
+}
+
+function providerNameFromUrl(url) {
+  try { return new URL(url).host; } catch (err) { return 'default'; }
+}
+
+function loadSettings() {
+  fetch('/api/v1/settings?token=' + encodeURIComponent(token))
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){
+      const data = d.data || {};
+      form.elements.ACCESS_TOKEN.value = data.ACCESS_TOKEN || '';
+      form.elements.UPSTREAM_TIMEOUT.value = data.UPSTREAM_TIMEOUT || '120';
+      form.elements.PAYLOAD_STORAGE_MODE.value = data.PAYLOAD_STORAGE_MODE || 'full';
+      form.elements.UPSTREAM_BASE_URL.value = data.UPSTREAM_BASE_URL || '';
+      form.elements.UPSTREAM_API_KEY.value = data.UPSTREAM_API_KEY || '';
+      loadProvidersFromConfig(data);
+      renderProviders();
+    })
+    .catch(function(){ showToast('加载配置失败', false); });
+}
+
+document.getElementById('addProvider').addEventListener('click', function(){ addProvider(); });
+document.getElementById('reloadSettings').addEventListener('click', loadSettings);
+document.getElementById('testProviders').addEventListener('click', fetchProviderHealth);
+document.getElementById('loadModels').addEventListener('click', fetchProviderModels);
+document.querySelectorAll('[data-preset]').forEach(function(button){
+  button.addEventListener('click', function(){ addProvider(presets[button.dataset.preset]); });
+});
+
 form.addEventListener('submit', function(e) {
   e.preventDefault();
-  var payload = {};
-  for (var i = 0; i < form.elements.length; i++) {
-    var el = form.elements[i];
+  syncHiddenFields();
+  const usable = normalizedProviders();
+  if (!usable.length && !form.elements.UPSTREAM_BASE_URL.value.trim()) {
+    showToast('请至少添加一个上游 Provider', false);
+    return;
+  }
+  for (const provider of usable) {
+    if (!/^https?:\/\//.test(provider.base_url)) {
+      showToast('接口地址必须以 http:// 或 https:// 开头：' + provider.base_url, false);
+      return;
+    }
+  }
+  const payload = {};
+  for (let i = 0; i < form.elements.length; i++) {
+    const el = form.elements[i];
     if (el.name) payload[el.name] = el.value.trim();
   }
   fetch('/api/v1/settings?token=' + encodeURIComponent(token), {
@@ -81,11 +397,13 @@ form.addEventListener('submit', function(e) {
     body: JSON.stringify(payload)
   }).then(function(r){
     if (r.ok) {
-      showToast('✅ 设置已保存，即时生效', true);
+      showToast('✅ 设置已保存，并已即时生效', true);
     } else {
       return r.json().then(function(err){ showToast('保存失败: ' + (err.detail || r.status), false); });
     }
   }).catch(function(err){ showToast('网络错误: ' + err.message, false); });
 });
+
+loadSettings();
 </script>
 {% endblock %}

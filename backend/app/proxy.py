@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+import asyncio
 from typing import Any
 
 import httpx
@@ -33,6 +34,7 @@ from .db import session_scope
 from .models import GenSource, GenStatus
 from .recording import record_generation
 from .tokens import estimate_usage
+from .upstreams import UpstreamProvider, resolve_upstream
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +55,7 @@ _HOP_BY_HOP = {
 }
 
 
-def _build_upstream_url(path: str) -> str:
+def _build_upstream_url(path: str, upstream: UpstreamProvider) -> str:
     """Build the full upstream URL, stripping duplicate ``v1/`` prefix.
 
     When the upstream base URL already ends with ``/v1`` (common for
@@ -65,7 +67,7 @@ def _build_upstream_url(path: str) -> str:
     Strips ALL leading ``v1/`` segments (not just one), so even
     ``v1/v1/chat/completions`` is normalised correctly.
     """
-    base = settings.upstream_base_url
+    base = upstream.base_url
     if not base:
         return path
     stripped = path.lstrip("/")
@@ -143,6 +145,7 @@ def _record(
     latency_ms: int,
     ttft_ms: int | None,
     provider: str | None,
+    base_url: str | None,
     error_msg: str | None,
     session_id: str | None,
     trace_id: str | None,
@@ -165,7 +168,7 @@ def _record(
                 prompt_json=request_body,
                 completion_json=response_body,
                 provider=provider,
-                base_url=settings.upstream_base_url or None,
+                base_url=base_url,
                 error_msg=error_msg,
                 trace_id=trace_id,
                 session_id=session_id,
@@ -184,11 +187,14 @@ async def _proxy_non_stream(
     """Forward a non-streaming request and record the full round trip."""
     is_stream = bool(request_body and request_body.get("stream"))
     model = request_body.get("model") if request_body else None
+    upstream_config = resolve_upstream(settings.upstreams, model)
+    if upstream_config is None:
+        return _missing_upstream_response()
     session_id = _extract_session_id(request, request_body)
     trace_id = request.headers.get("x-trace-id")
 
-    upstream_url = _build_upstream_url(path)
-    fwd_headers = _forwarded_headers(request.headers, auth_key=settings.upstream_api_key)
+    upstream_url = _build_upstream_url(path, upstream_config)
+    fwd_headers = _forwarded_headers(request.headers, auth_key=upstream_config.api_key)
     start = time.monotonic()
     error_msg: str | None = None
     status = GenStatus.SUCCESS
@@ -210,7 +216,8 @@ async def _proxy_non_stream(
             status=GenStatus.ERROR,
             latency_ms=latency_ms,
             ttft_ms=None,
-            provider=None,
+            provider=upstream_config.provider_label,
+            base_url=upstream_config.base_url,
             error_msg=error_msg,
             session_id=session_id,
             trace_id=trace_id,
@@ -234,7 +241,8 @@ async def _proxy_non_stream(
         status=status,
         latency_ms=latency_ms,
         ttft_ms=None,
-        provider=_provider_from_url(settings.upstream_base_url),
+        provider=upstream_config.provider_label,
+        base_url=upstream_config.base_url,
         error_msg=error_msg,
         session_id=session_id,
         trace_id=trace_id,
@@ -246,17 +254,6 @@ async def _proxy_non_stream(
         headers=_response_headers(upstream.headers),
         media_type=upstream.headers.get("content-type"),
     )
-
-
-def _provider_from_url(url: str | None) -> str | None:
-    """Best-effort provider label from the upstream URL host."""
-    if not url:
-        return None
-    try:
-        host = url.split("://", 1)[-1].split("/", 1)[0]
-        return host
-    except Exception:
-        return url
 
 
 def _extract_session_id(request: Request, body: dict | None) -> str | None:
@@ -283,11 +280,14 @@ async def _proxy_stream(
 ) -> StreamingResponse:
     """Forward a streaming request, capturing usage on the fly."""
     model = request_body.get("model") if request_body else None
+    upstream_config = resolve_upstream(settings.upstreams, model)
+    if upstream_config is None:
+        return StreamingResponse(iter([b'{"error":"upstream_not_configured"}']), status_code=503, media_type="application/json")  # type: ignore
     session_id = _extract_session_id(request, request_body)
     trace_id = request.headers.get("x-trace-id")
 
-    upstream_url = _build_upstream_url(path)
-    fwd_headers = _forwarded_headers(request.headers, auth_key=settings.upstream_api_key)
+    upstream_url = _build_upstream_url(path, upstream_config)
+    fwd_headers = _forwarded_headers(request.headers, auth_key=upstream_config.api_key)
 
     start = time.monotonic()
     ttft_ms: int | None = None
@@ -309,7 +309,8 @@ async def _proxy_stream(
             status=GenStatus.ERROR,
             latency_ms=latency_ms,
             ttft_ms=None,
-            provider=None,
+            provider=upstream_config.provider_label,
+            base_url=upstream_config.base_url,
             error_msg=error_msg,
             session_id=session_id,
             trace_id=trace_id,
@@ -391,7 +392,8 @@ async def _proxy_stream(
                     status=GenStatus.ERROR if is_error else GenStatus.SUCCESS,
                     latency_ms=latency_ms,
                     ttft_ms=ttft_ms,
-                    provider=_provider_from_url(settings.upstream_base_url),
+                    provider=upstream_config.provider_label,
+                    base_url=upstream_config.base_url,
                     error_msg=error_msg,
                     session_id=session_id,
                     trace_id=trace_id,
@@ -415,7 +417,63 @@ async def _proxy_stream(
 @router.post("/v1/completions")
 async def chat_completions(request: Request) -> Response:
     """Proxy endpoint for chat/text completions."""
-    return await _handle(request, "v1/chat/completions")
+    return await _handle(request, request.url.path.lstrip("/"))
+
+
+@router.get("/v1/models")
+async def list_models(request: Request) -> Response:
+    """Fetch model lists from every configured upstream in parallel."""
+    if not settings.upstream_configured:
+        return _missing_upstream_response()
+
+    client = _get_client()
+    providers = settings.upstreams
+
+    async def fetch(provider: UpstreamProvider) -> tuple[UpstreamProvider, httpx.Response | Exception]:
+        try:
+            response = await client.get(
+                _build_upstream_url("v1/models", provider),
+                headers=_forwarded_headers(request.headers, auth_key=provider.api_key),
+            )
+            return provider, response
+        except httpx.RequestError as exc:
+            return provider, exc
+
+    results = await asyncio.gather(*(fetch(provider) for provider in providers))
+    models: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for provider, result in results:
+        if isinstance(result, Exception):
+            errors.append({"provider": provider.provider_label, "error": str(result)})
+            continue
+        if result.status_code >= 400:
+            errors.append({"provider": provider.provider_label, "error": f"status {result.status_code}"})
+            continue
+        payload = _parse_body(result.content) or {}
+        items = payload.get("data", []) if isinstance(payload, dict) else []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            model_id = str(item.get("id") or "")
+            dedupe_key = f"{provider.provider_label}:{model_id}"
+            if not model_id or dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            merged = dict(item)
+            merged.setdefault("owned_by", provider.provider_label)
+            models.append(merged)
+
+    if not models and errors:
+        return Response(
+            content=json.dumps({"error": {"message": "all upstream model requests failed", "details": errors}}),
+            status_code=502,
+            media_type="application/json",
+        )
+    body: dict[str, Any] = {"object": "list", "data": models}
+    if errors:
+        body["upstream_errors"] = errors
+    return Response(content=json.dumps(body), media_type="application/json")
 
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
@@ -433,18 +491,7 @@ async def passthrough(request: Request, path: str) -> Response:
 async def _handle(request: Request, path: str, *, record: bool = True) -> Response:
     """Dispatch a request to streaming or non-streaming handling."""
     if not settings.upstream_configured:
-        return Response(
-            content=json.dumps(
-                {
-                    "error": {
-                        "message": "UPSTREAM_BASE_URL is not configured. Set it to your real LLM provider.",
-                        "type": "config_error",
-                    }
-                }
-            ),
-            status_code=503,
-            media_type="application/json",
-        )
+        return _missing_upstream_response()
 
     raw_body = await request.body()
     body = _parse_body(raw_body)
@@ -456,9 +503,12 @@ async def _handle(request: Request, path: str, *, record: bool = True) -> Respon
     if record:
         return await _proxy_non_stream(request, client, path, raw_body, body)
     # Non-recorded passthrough.
-    upstream_url = _build_upstream_url(path)
+    upstream_config = resolve_upstream(settings.upstreams, body.get("model") if body else None)
+    if upstream_config is None:
+        return _missing_upstream_response()
+    upstream_url = _build_upstream_url(path, upstream_config)
     fwd_headers = _forwarded_headers(
-        request.headers, auth_key=settings.upstream_api_key
+        request.headers, auth_key=upstream_config.api_key
     )
     method = request.method
     upstream = await client.request(
@@ -469,4 +519,20 @@ async def _handle(request: Request, path: str, *, record: bool = True) -> Respon
         status_code=upstream.status_code,
         headers=_response_headers(upstream.headers),
         media_type=upstream.headers.get("content-type"),
+    )
+
+
+
+def _missing_upstream_response() -> Response:
+    return Response(
+        content=json.dumps(
+            {
+                "error": {
+                    "message": "No upstream is configured. Set UPSTREAMS_JSON or legacy UPSTREAM_BASE_URL.",
+                    "type": "config_error",
+                }
+            }
+        ),
+        status_code=503,
+        media_type="application/json",
     )
